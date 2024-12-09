@@ -79,4 +79,5 @@ jobs:
           package: release.zip
           respect-funcignore: true
           scm-do-build-during-deployment: true
-          build-remote: true
+          remote-build: true
+          enable-oryx-build: true
