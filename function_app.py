@@ -31,7 +31,7 @@ def to_dict(obj):
         return result
     return obj
 
-@app.route(route="api/{route}", methods=["GET"])
+@app.route(route="{route}", methods=["GET"])
 def get_all(req: func.HttpRequest) -> func.HttpResponse:
     try:
         route = req.route_params.get('route')
@@ -59,7 +59,7 @@ def get_all(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500
         )
 
-@app.route(route="api/{route}/{id}", methods=["GET"])
+@app.route(route="{route}/{id}", methods=["GET"])
 def get_by_id(req: func.HttpRequest) -> func.HttpResponse:
     try:
         route = req.route_params.get('route')
@@ -95,7 +95,7 @@ def get_by_id(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500
         )
 
-@app.route(route="api/{route}", methods=["POST"])
+@app.route(route="{route}", methods=["POST"])
 def create(req: func.HttpRequest) -> func.HttpResponse:
     try:
         route = req.route_params.get('route')
@@ -134,7 +134,7 @@ def create(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500
         )
 
-@app.route(route="api/{route}/{id}", methods=["PUT"])
+@app.route(route="{route}/{id}", methods=["PUT"])
 def update(req: func.HttpRequest) -> func.HttpResponse:
     try:
         route = req.route_params.get('route')
@@ -183,7 +183,7 @@ def update(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500
         )
 
-@app.route(route="api/{route}/{id}", methods=["DELETE"])
+@app.route(route="{route}/{id}", methods=["DELETE"])
 def delete(req: func.HttpRequest) -> func.HttpResponse:
     try:
         route = req.route_params.get('route')
