@@ -75,7 +75,7 @@ jobs:
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
-          app-name: 'swapi'
+          app-name: 'sw-api-leonardo'
           slot-name: 'dev'
           package: release.zip
           respect-funcignore: true
