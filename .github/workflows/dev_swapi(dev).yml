@@ -37,47 +37,44 @@ jobs:
       # Optional: Add step to run tests here
 
       - name: Zip artifact for deployment
-        run: |
-          cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          zip -r release.zip . -x "venv/*" ".git/*" ".github/*" ".vscode/*" "tests/*" "*.pyc"
+        run: zip release.zip ./* -r
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: function-app
-          path: release.zip
+          name: python-app
+          path: |
+            release.zip
+            !venv/
 
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     needs: build
-    environment: dev
+    
+    permissions:
+      id-token: write #This is required for requesting the JWT
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: function-app
-
-      - name: Azure login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          name: python-app
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip
+        run: unzip release.zip     
+        
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_3CE32B3A4E8946F48BA28FBBB605657F }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9643EF7239E44813ABD2347850057253 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_5F4B6F07F71A4CB4A177241D5FF2DAB3 }}
 
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
-          app-name: 'sw-api-leonardo'
+          app-name: 'swapi'
           slot-name: 'dev'
-          package: release.zip
-          respect-funcignore: true
-          scm-do-build-during-deployment: true
-          remote-build: true
-          enable-oryx-build: true
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          
