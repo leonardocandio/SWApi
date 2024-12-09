@@ -42,7 +42,7 @@ def process_relationships(data: Dict[str, Any], db) -> Dict[str, Any]:
     
     return processed
 
-@app.route(route="scrape_swapi", auth_level=func.AuthLevel.ADMIN)
+@app.route(route="scrape_swapi", methods=["GET", "POST"], auth_level=func.AuthLevel.ADMIN)
 def scrape_swapi(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Starting SWAPI data scraping')
     
