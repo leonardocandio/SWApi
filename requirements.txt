@@ -3,3 +3,7 @@
 # Manually managing azure-functions-worker may cause unexpected issues
 
 azure-functions
+requests==2.31.0
+sqlalchemy==2.0.25
+python-dotenv==1.0.0
+pyodbc==5.0.1
