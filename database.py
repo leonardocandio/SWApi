@@ -6,7 +6,7 @@ import urllib.parse
 
 load_dotenv()
 
-CONNECTION_STRING = os.getenv("SQL_CONNECTION_STRING")
+CONNECTION_STRING = os.getenv("SQLAZURECONNSTR_swdb")
 
 params = urllib.parse.quote_plus(CONNECTION_STRING)
 DATABASE_URL = f"mssql+pyodbc://?odbc_connect={params}"
