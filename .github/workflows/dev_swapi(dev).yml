@@ -70,4 +70,3 @@ jobs:
           package: release.zip
           respect-funcignore: true
           scm-do-build-during-deployment: true
-          scm-do-build-during-deployment: true
