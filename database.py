@@ -9,7 +9,7 @@ load_dotenv()
 CONNECTION_STRING = os.getenv("SQLAZURECONNSTR_DefaultConnection")
 
 params = urllib.parse.quote_plus(CONNECTION_STRING)
-DATABASE_URL = f"mssql+pyodbc:///?odbc_connect={params}"
+DATABASE_URL = f"mssql+pyodbc://?odbc_connect={params}"
 
 engine = create_engine(
     DATABASE_URL,
@@ -19,6 +19,17 @@ engine = create_engine(
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def drop_tables():
+    from models import Base
+    Base.metadata.drop_all(bind=engine)
+
+def create_tables(drop=False):
+    if drop:
+        drop_tables()
+    from models import Base
+    Base.metadata.create_all(bind=engine)
+
 
 def get_db():
     db = SessionLocal()
