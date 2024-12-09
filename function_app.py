@@ -126,33 +126,3 @@ def scrape_swapi(req: func.HttpRequest) -> func.HttpResponse:
         )
     finally:
         db.close()
-
-@app.route(route="get_planets")
-def get_planets(req: func.HttpRequest) -> func.HttpResponse:
-    try:
-        db = next(get_db())
-        planets = db.query(Planet).all()
-        
-        planets_list = []
-        for planet in planets:
-            planet_dict = {
-                'id': planet.id,
-                'name': planet.name,
-                'climate': planet.climate,
-                'terrain': planet.terrain,
-                'population': planet.population
-            }
-            planets_list.append(planet_dict)
-            
-        return func.HttpResponse(
-            json.dumps(planets_list),
-            mimetype="application/json",
-            status_code=200
-        )
-    except Exception as e:
-        return func.HttpResponse(
-            f"Error retrieving planets: {str(e)}",
-            status_code=500
-        )
-    finally:
-        db.close()
