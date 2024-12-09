@@ -4,6 +4,8 @@ import json
 from database import get_db
 from models import Film, Person, Planet, Species, Vehicle, Starship
 from sqlalchemy.exc import SQLAlchemyError
+import traceback
+from sqlalchemy import select
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -18,23 +20,48 @@ def get_model_class(route):
     }
     return route_to_model.get(route)
 
-def to_dict(obj):
-    if hasattr(obj, '__table__'):
-        result = {column.key: getattr(obj, column.key)
-                 for column in obj.__table__.columns}
+def to_dict(obj, include_relationships=False):
+    """
+    Convert SQLAlchemy model instance to dictionary.
+    Args:
+        obj: SQLAlchemy model instance
+        include_relationships: If True, includes full relationship data. If False, only includes IDs.
+    """
+    if not hasattr(obj, '__table__'):
+        return obj
+
+    # Get all column values
+    result = {column.key: getattr(obj, column.key)
+             for column in obj.__table__.columns}
+    
+    if not include_relationships:
+        # Only include IDs for relationships
         for relationship in obj.__mapper__.relationships:
             related_objs = getattr(obj, relationship.key)
             if isinstance(related_objs, list):
-                result[relationship.key] = [to_dict(related_obj) for related_obj in related_objs]
+                result[f"{relationship.key}_ids"] = [
+                    related_obj.id for related_obj in related_objs
+                ] if related_objs else []
             elif related_objs is not None:
-                result[relationship.key] = to_dict(related_objs)
-        return result
-    return obj
+                result[f"{relationship.key}_id"] = related_objs.id
+    else:
+        # Include full relationship data
+        for relationship in obj.__mapper__.relationships:
+            related_objs = getattr(obj, relationship.key)
+            if isinstance(related_objs, list):
+                result[relationship.key] = [
+                    to_dict(related_obj, False) for related_obj in related_objs
+                ] if related_objs else []
+            elif related_objs is not None:
+                result[relationship.key] = to_dict(related_objs, False)
+
+    return result
 
 @app.route(route="{route}", methods=["GET"])
 def get_all(req: func.HttpRequest) -> func.HttpResponse:
     try:
         route = req.route_params.get('route')
+        include_relationships = req.params.get('include_relationships', '').lower() == 'true'
         model_class = get_model_class(route)
         
         if not model_class:
@@ -45,16 +72,17 @@ def get_all(req: func.HttpRequest) -> func.HttpResponse:
             )
 
         db = next(get_db())
-        items = db.query(model_class).all()
-        
+        stmt = select(model_class)
+        items = db.execute(stmt).scalars().all()
+
         return func.HttpResponse(
-            body=json.dumps([to_dict(item) for item in items]),
+            body=json.dumps([to_dict(item, include_relationships) for item in items]),
             mimetype="application/json",
             status_code=200
         )
     except Exception as e:
         return func.HttpResponse(
-            body=json.dumps({"error": str(e)}),
+            body=json.dumps({"error": str(e) + " " + str(traceback.format_exc())}),
             mimetype="application/json",
             status_code=500
         )
@@ -64,6 +92,7 @@ def get_by_id(req: func.HttpRequest) -> func.HttpResponse:
     try:
         route = req.route_params.get('route')
         id = req.route_params.get('id')
+        include_relationships = req.params.get('include_relationships', '').lower() == 'true'
         model_class = get_model_class(route)
         
         if not model_class:
@@ -74,7 +103,8 @@ def get_by_id(req: func.HttpRequest) -> func.HttpResponse:
             )
 
         db = next(get_db())
-        item = db.query(model_class).filter(model_class.id == id).first()
+        stmt = select(model_class).where(model_class.id == id)
+        item = db.execute(stmt).scalar_one_or_none()
         
         if not item:
             return func.HttpResponse(
@@ -84,7 +114,7 @@ def get_by_id(req: func.HttpRequest) -> func.HttpResponse:
             )
         
         return func.HttpResponse(
-            body=json.dumps(to_dict(item)),
+            body=json.dumps(to_dict(item, include_relationships)),
             mimetype="application/json",
             status_code=200
         )
