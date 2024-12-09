@@ -39,14 +39,14 @@ jobs:
       - name: Zip artifact for deployment
         run: |
           cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          zip -r ../release.zip . -x "venv/*" ".git/*" ".github/*" ".vscode/*" "tests/*" "*.pyc"
+          zip -r ~/release.zip . -x "venv/*" ".git/*" ".github/*" ".vscode/*" "tests/*" "*.pyc"
           cd ..
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: function-app
-          path: release.zip
+          path: ~/release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -69,5 +69,5 @@ jobs:
           slot-name: 'dev'
           package: release.zip
           respect-funcignore: true
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_CD90AA6AD8A44B3CACD55AE653B0B366 }}
+          scm-do-build-during-deployment: true
           scm-do-build-during-deployment: true
