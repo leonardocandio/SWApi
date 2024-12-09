@@ -39,14 +39,13 @@ jobs:
       - name: Zip artifact for deployment
         run: |
           cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          zip -r ../release.zip . -x "venv/*" ".git/*" ".github/*" ".vscode/*" "tests/*" "*.pyc"
-          cd ..
+          zip -r release.zip . -x "venv/*" ".git/*" ".github/*" ".vscode/*" "tests/*" "*.pyc"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: function-app
-          path: ./release.zip
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -80,4 +79,5 @@ jobs:
           package: release.zip
           respect-funcignore: true
           scm-do-build-during-deployment: true
-          build-remote: true
+          remote-build: true
+          enable-oryx-build: true
