@@ -1,10 +1,10 @@
-# DO NOT include azure-functions-worker in this file
-# The Python Worker is managed by Azure Functions platform
-# Manually managing azure-functions-worker may cause unexpected issues
-
-azure-functions
-requests==2.31.0
+azure-functions==1.17.0
+requests
 sqlalchemy>=1.4.0
 python-dotenv
 urllib3==2.0.1
 pyodbc>=4.0.39
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0

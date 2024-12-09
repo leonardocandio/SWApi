@@ -20,6 +20,7 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+#Drop all tables and delete all data
 def drop_tables():
     from models import Base
     Base.metadata.drop_all(bind=engine)

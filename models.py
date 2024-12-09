@@ -1,43 +1,10 @@
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Float, Text
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
-class Film(Base):
-    __tablename__ = 'films'
-    __table_args__ = {'schema': 'dbo'}
-    
-    id = Column(Integer, primary_key=True)
-    title = Column(String(200))
-    episode_id = Column(Integer)
-    opening_crawl = Column(Text)
-    director = Column(String(100))
-    producer = Column(String(200))
-    release_date = Column(String(50))
-    created = Column(String(50))
-    edited = Column(String(50))
-    url = Column(String(200))
-
-class Person(Base):
-    __tablename__ = 'people'
-    __table_args__ = {'schema': 'dbo'}
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100))
-    height = Column(String(20))
-    mass = Column(String(20))
-    hair_color = Column(String(50))
-    skin_color = Column(String(50))
-    eye_color = Column(String(50))
-    birth_year = Column(String(20))
-    gender = Column(String(20))
-    homeworld_id = Column(Integer, ForeignKey('dbo.planets.id', ondelete='SET NULL'))
-    created = Column(String(50))
-    edited = Column(String(50))
-    url = Column(String(200))
-
-# Move the association tables after the main tables
+# Association tables
 film_people = Table('film_people', Base.metadata,
     Column('film_id', Integer, ForeignKey('dbo.films.id', ondelete='CASCADE')),
     Column('person_id', Integer, ForeignKey('dbo.people.id', ondelete='CASCADE')),
@@ -68,15 +35,70 @@ film_starships = Table('film_starships', Base.metadata,
     schema='dbo'
 )
 
-# Add relationships after all tables are defined
-Film.characters = relationship("Person", secondary=film_people, back_populates="films")
-Film.planets = relationship("Planet", secondary=film_planets, back_populates="films")
-Film.species = relationship("Species", secondary=film_species, back_populates="films")
-Film.vehicles = relationship("Vehicle", secondary=film_vehicles, back_populates="films")
-Film.starships = relationship("Starship", secondary=film_starships, back_populates="films")
+person_species = Table('person_species', Base.metadata,
+    Column('person_id', Integer, ForeignKey('dbo.people.id', ondelete='CASCADE')),
+    Column('species_id', Integer, ForeignKey('dbo.species.id', ondelete='CASCADE')),
+    schema='dbo'
+)
 
-Person.films = relationship("Film", secondary=film_people, back_populates="characters")
-Person.homeworld = relationship("Planet", back_populates="residents")
+person_vehicles = Table('person_vehicles', Base.metadata,
+    Column('person_id', Integer, ForeignKey('dbo.people.id', ondelete='CASCADE')),
+    Column('vehicle_id', Integer, ForeignKey('dbo.vehicles.id', ondelete='CASCADE')),
+    schema='dbo'
+)
+
+person_starships = Table('person_starships', Base.metadata,
+    Column('person_id', Integer, ForeignKey('dbo.people.id', ondelete='CASCADE')),
+    Column('starship_id', Integer, ForeignKey('dbo.starships.id', ondelete='CASCADE')),
+    schema='dbo'
+)
+
+class Film(Base):
+    __tablename__ = 'films'
+    __table_args__ = {'schema': 'dbo'}
+    
+    id = Column(Integer, primary_key=True)
+    title = Column(String(200))
+    episode_id = Column(Integer)
+    opening_crawl = Column(Text)
+    director = Column(String(100))
+    producer = Column(String(200))
+    release_date = Column(String(50))
+    created = Column(String(50))
+    edited = Column(String(50))
+    url = Column(String(200))
+
+    # Relationships
+    characters = relationship("Person", secondary=film_people, back_populates="films")
+    planets = relationship("Planet", secondary=film_planets, back_populates="films")
+    species = relationship("Species", secondary=film_species, back_populates="films")
+    vehicles = relationship("Vehicle", secondary=film_vehicles, back_populates="films")
+    starships = relationship("Starship", secondary=film_starships, back_populates="films")
+
+class Person(Base):
+    __tablename__ = 'people'
+    __table_args__ = {'schema': 'dbo'}
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100))
+    height = Column(String(20))
+    mass = Column(String(20))
+    hair_color = Column(String(50))
+    skin_color = Column(String(50))
+    eye_color = Column(String(50))
+    birth_year = Column(String(20))
+    gender = Column(String(20))
+    homeworld_id = Column(Integer, ForeignKey('dbo.planets.id', ondelete='SET NULL'))
+    created = Column(String(50))
+    edited = Column(String(50))
+    url = Column(String(200))
+
+    # Relationships
+    homeworld = relationship("Planet", back_populates="residents")
+    films = relationship("Film", secondary=film_people, back_populates="characters")
+    species = relationship("Species", secondary=person_species, back_populates="people")
+    vehicles = relationship("Vehicle", secondary=person_vehicles, back_populates="pilots")
+    starships = relationship("Starship", secondary=person_starships, back_populates="pilots")
 
 class Planet(Base):
     __tablename__ = 'planets'
@@ -96,8 +118,10 @@ class Planet(Base):
     edited = Column(String(50))
     url = Column(String(200))
     
+    # Relationships
     residents = relationship("Person", back_populates="homeworld")
     films = relationship("Film", secondary=film_planets, back_populates="planets")
+    native_species = relationship("Species", back_populates="homeworld")
 
 class Species(Base):
     __tablename__ = 'species'
@@ -118,7 +142,9 @@ class Species(Base):
     edited = Column(String(50))
     url = Column(String(200))
     
-    homeworld = relationship("Planet")
+    # Relationships
+    homeworld = relationship("Planet", back_populates="native_species")
+    people = relationship("Person", secondary=person_species, back_populates="species")
     films = relationship("Film", secondary=film_species, back_populates="species")
 
 class Vehicle(Base):
@@ -141,6 +167,8 @@ class Vehicle(Base):
     edited = Column(String(50))
     url = Column(String(200))
     
+    # Relationships
+    pilots = relationship("Person", secondary=person_vehicles, back_populates="vehicles")
     films = relationship("Film", secondary=film_vehicles, back_populates="vehicles")
 
 class Starship(Base):
@@ -165,4 +193,6 @@ class Starship(Base):
     edited = Column(String(50))
     url = Column(String(200))
     
-    films = relationship("Film", secondary=film_starships, back_populates="starships") 
+    # Relationships
+    pilots = relationship("Person", secondary=person_starships, back_populates="starships")
+    films = relationship("Film", secondary=film_starships, back_populates="starships")

@@ -1,19 +1,26 @@
 import requests
-from database import SessionLocal, create_tables
+from database import get_db, create_tables
 from models import Film, Person, Planet, Species, Vehicle, Starship
 from sqlalchemy.exc import IntegrityError
 
 
+def get_id_from_url(url):
+    """Extract ID from SWAPI URL"""
+    return int(url.split('/')[-2])
+
+
 def get_all_data(endpoint):
+    """Fetch all data from a SWAPI endpoint with pagination handling"""
     results = []
     url = f"https://swapi.py4e.com/api/{endpoint}/"
-
+    
     while url:
+        print(f"Fetching {url}")
         response = requests.get(url)
         data = response.json()
         results.extend(data["results"])
         url = data["next"]
-
+    
     return results
 
 
@@ -21,24 +28,24 @@ def populate_db():
     # First ensure tables exist
     create_tables(drop=True)
 
-    db = SessionLocal()
+    db = next(get_db())
 
     try:
         # Get all data from SWAPI
         print("Fetching data from SWAPI...")
-        films = get_all_data("films")
-        people = get_all_data("people")
-        planets = get_all_data("planets")
-        species = get_all_data("species")
-        vehicles = get_all_data("vehicles")
-        starships = get_all_data("starships")
+        all_planets = get_all_data("planets")
+        all_films = get_all_data("films")
+        all_species = get_all_data("species")
+        all_people = get_all_data("people")
+        all_vehicles = get_all_data("vehicles")
+        all_starships = get_all_data("starships")
 
-        # Populate planets first
+        # Populate planets first since they're referenced by other models
         print("Populating planets...")
-        for planet_data in planets:
+        for planet_data in all_planets:
             try:
-                planet_id = int(planet_data["url"].split("/")[-2])
-                if not db.query(Planet).get(planet_id):
+                planet_id = get_id_from_url(planet_data["url"])
+                if not db.get(Planet, planet_id):
                     planet = Planet(
                         id=planet_id,
                         name=planet_data["name"],
@@ -52,7 +59,7 @@ def populate_db():
                         population=planet_data["population"],
                         created=planet_data["created"],
                         edited=planet_data["edited"],
-                        url=planet_data["url"],
+                        url=planet_data["url"]
                     )
                     db.add(planet)
                     db.flush()
@@ -63,9 +70,10 @@ def populate_db():
         db.commit()
 
         # Populate films
-        for film_data in films:
+        print("Populating films...")
+        for film_data in all_films:
             film = Film(
-                id=int(film_data["url"].split("/")[-2]),
+                id=get_id_from_url(film_data["url"]),
                 title=film_data["title"],
                 episode_id=film_data["episode_id"],
                 opening_crawl=film_data["opening_crawl"],
@@ -74,18 +82,20 @@ def populate_db():
                 release_date=film_data["release_date"],
                 created=film_data["created"],
                 edited=film_data["edited"],
-                url=film_data["url"],
+                url=film_data["url"]
             )
             db.merge(film)
+        db.commit()
 
         # Populate species
-        for species_data in species:
+        print("Populating species...")
+        for species_data in all_species:
             homeworld_id = None
             if species_data["homeworld"]:
-                homeworld_id = int(species_data["homeworld"].split("/")[-2])
+                homeworld_id = get_id_from_url(species_data["homeworld"])
 
             species_obj = Species(
-                id=int(species_data["url"].split("/")[-2]),
+                id=get_id_from_url(species_data["url"]),
                 name=species_data["name"],
                 classification=species_data["classification"],
                 designation=species_data["designation"],
@@ -98,18 +108,20 @@ def populate_db():
                 language=species_data["language"],
                 created=species_data["created"],
                 edited=species_data["edited"],
-                url=species_data["url"],
+                url=species_data["url"]
             )
             db.merge(species_obj)
+        db.commit()
 
         # Populate people
-        for person_data in people:
+        print("Populating people...")
+        for person_data in all_people:
             homeworld_id = None
             if person_data["homeworld"]:
-                homeworld_id = int(person_data["homeworld"].split("/")[-2])
+                homeworld_id = get_id_from_url(person_data["homeworld"])
 
             person = Person(
-                id=int(person_data["url"].split("/")[-2]),
+                id=get_id_from_url(person_data["url"]),
                 name=person_data["name"],
                 height=person_data["height"],
                 mass=person_data["mass"],
@@ -121,14 +133,16 @@ def populate_db():
                 homeworld_id=homeworld_id,
                 created=person_data["created"],
                 edited=person_data["edited"],
-                url=person_data["url"],
+                url=person_data["url"]
             )
             db.merge(person)
+        db.commit()
 
         # Populate vehicles
-        for vehicle_data in vehicles:
+        print("Populating vehicles...")
+        for vehicle_data in all_vehicles:
             vehicle = Vehicle(
-                id=int(vehicle_data["url"].split("/")[-2]),
+                id=get_id_from_url(vehicle_data["url"]),
                 name=vehicle_data["name"],
                 model=vehicle_data["model"],
                 manufacturer=vehicle_data["manufacturer"],
@@ -142,14 +156,16 @@ def populate_db():
                 vehicle_class=vehicle_data["vehicle_class"],
                 created=vehicle_data["created"],
                 edited=vehicle_data["edited"],
-                url=vehicle_data["url"],
+                url=vehicle_data["url"]
             )
             db.merge(vehicle)
+        db.commit()
 
         # Populate starships
-        for starship_data in starships:
+        print("Populating starships...")
+        for starship_data in all_starships:
             starship = Starship(
-                id=int(starship_data["url"].split("/")[-2]),
+                id=get_id_from_url(starship_data["url"]),
                 name=starship_data["name"],
                 model=starship_data["model"],
                 manufacturer=starship_data["manufacturer"],
@@ -165,42 +181,106 @@ def populate_db():
                 starship_class=starship_data["starship_class"],
                 created=starship_data["created"],
                 edited=starship_data["edited"],
-                url=starship_data["url"],
+                url=starship_data["url"]
             )
             db.merge(starship)
+        db.commit()
 
         # Handle many-to-many relationships
-        for film_data in films:
-            film_id = int(film_data["url"].split("/")[-2])
-            film = db.query(Film).get(film_id)
+        print("Setting up relationships...")
+        
+        # Film relationships
+        for film_data in all_films:
+            film_id = get_id_from_url(film_data["url"])
+            film = db.get(Film, film_id)
+            
+            if not film:
+                print(f"Warning: Film with ID {film_id} not found in database")
+                continue
 
-            # Characters
-            for char_url in film_data["characters"]:
-                char_id = int(char_url.split("/")[-2])
-                character = db.query(Person).get(char_id)
-                if character:
-                    film.characters.append(character)
+            print(f"Processing relationships for film: {film.title}")
 
-            # Species
-            for species_url in film_data["species"]:
-                species_id = int(species_url.split("/")[-2])
-                species_obj = db.query(Species).get(species_id)
-                if species_obj:
-                    film.species.append(species_obj)
+            try:
+                # Characters (people)
+                for char_url in film_data["characters"]:
+                    char_id = get_id_from_url(char_url)
+                    character = db.query(Person).get(char_id)
+                    if character and character not in film.characters:
+                        film.characters.append(character)
 
-            # Vehicles
-            for vehicle_url in film_data["vehicles"]:
-                vehicle_id = int(vehicle_url.split("/")[-2])
-                vehicle = db.query(Vehicle).get(vehicle_id)
-                if vehicle:
-                    film.vehicles.append(vehicle)
+                # Planets
+                for planet_url in film_data["planets"]:
+                    planet_id = get_id_from_url(planet_url)
+                    planet = db.query(Planet).get(planet_id)
+                    if planet and planet not in film.planets:
+                        film.planets.append(planet)
 
-            # Starships
-            for starship_url in film_data["starships"]:
-                starship_id = int(starship_url.split("/")[-2])
-                starship = db.query(Starship).get(starship_id)
-                if starship:
-                    film.starships.append(starship)
+                # Species
+                for species_url in film_data["species"]:
+                    species_id = get_id_from_url(species_url)
+                    species_obj = db.query(Species).get(species_id)
+                    if species_obj and species_obj not in film.species:
+                        film.species.append(species_obj)
+
+                # Vehicles
+                for vehicle_url in film_data["vehicles"]:
+                    vehicle_id = get_id_from_url(vehicle_url)
+                    vehicle = db.query(Vehicle).get(vehicle_id)
+                    if vehicle and vehicle not in film.vehicles:
+                        film.vehicles.append(vehicle)
+
+                # Starships
+                for starship_url in film_data["starships"]:
+                    starship_id = get_id_from_url(starship_url)
+                    starship = db.query(Starship).get(starship_id)
+                    if starship and starship not in film.starships:
+                        film.starships.append(starship)
+
+                db.flush()  # Flush after each film's relationships
+            except Exception as e:
+                print(f"Error processing relationships for film {film_id}: {str(e)}")
+                continue
+
+        # Person relationships
+        for person_data in all_people:
+            person_id = get_id_from_url(person_data["url"])
+            person = db.get(Person, person_id)
+            
+            if not person:
+                print(f"Warning: Person with ID {person_id} not found in database")
+                continue
+
+            print(f"Processing relationships for person: {person.name}")
+
+            try:
+                # Species
+                for species_url in person_data["species"]:
+                    species_id = get_id_from_url(species_url)
+                    species_obj = db.get(Species, species_id)
+                    if species_obj and species_obj not in person.species:
+                        person.species.append(species_obj)
+                        db.merge(person)
+
+                # Vehicles
+                for vehicle_url in person_data["vehicles"]:
+                    vehicle_id = get_id_from_url(vehicle_url)
+                    vehicle = db.get(Vehicle, vehicle_id)
+                    if vehicle and vehicle not in person.vehicles:
+                        person.vehicles.append(vehicle)
+                        db.merge(person)
+
+                # Starships
+                for starship_url in person_data["starships"]:
+                    starship_id = get_id_from_url(starship_url)
+                    starship = db.get(Starship, starship_id)
+                    if starship and starship not in person.starships:
+                        person.starships.append(starship)
+                        db.merge(person)
+
+                db.commit()  # Add a commit after each person's relationships are set
+            except Exception as e:
+                print(f"Error processing relationships for person {person_id}: {str(e)}")
+                continue
 
         db.commit()
         print("Database populated successfully!")
