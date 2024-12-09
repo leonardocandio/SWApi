@@ -39,8 +39,7 @@ jobs:
       - name: Zip artifact for deployment
         run: |
           cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          zip -r ../release.zip . -x "venv/*" ".git/*" ".github/*" ".vscode/*" "tests/*" "*.pyc"
-          cd ..
+          zip -r release.zip . -x "venv/*" ".git/*" ".github/*" ".vscode/*" "tests/*" "*.pyc"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
